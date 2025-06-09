@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Организация мероприятий</title>
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f6fb;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 48px auto;
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 6px 36px #15317e12;
+      padding: 32px 28px 40px 28px;
+    }
+    h1 {
+      color: #304ffe;
+      margin-bottom: 6px;
+      font-size: 2.4em;
+      letter-spacing: 2px;
+    }
+    .services {
+      background: #e8eaf6;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 26px;
+      font-size: 1.12em;
+    }
+    .services ul { margin: 0; padding-left: 22px; }
+    label { font-weight: 500; }
+    textarea, input[type="email"] {
+      width: 100%;
+      padding: 10px;
+      margin: 9px 0 22px 0;
+      border-radius: 6px;
+      border: 1px solid #c5cae9;
+      font-size: 1em;
+      box-sizing: border-box;
+      resize: vertical;
+      background: #fafbff;
+      transition: border-color .2s;
+    }
+    textarea:focus, input:focus { border-color: #536dfe; outline: none; }
+    button {
+      background: linear-gradient(90deg, #304ffe, #5c6bc0);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 11px 26px;
+      font-size: 1.06em;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 8px #3f51b522;
+      transition: background .2s;
+    }
+    button:hover {
+      background: linear-gradient(90deg, #3d5afe, #8c9eff);
+    }
+    #response { margin-top: 18px; font-size: 1.13em; color: #3f51b5; }
+    #orderResponse { margin-top: 14px; font-size: 1.05em; color: #3f51b5; }
+    #progressBox {
+      margin-top: 32px;
+      background: #e8eaf6;
+      border-radius: 10px;
+      padding: 14px 16px;
+      min-height: 44px;
+      font-size: 1.08em;
+      color: #263238;
+      max-height: 170px;
+      overflow-y: auto;
+      box-shadow: 0 1px 6px #b0bec520;
+    }
+    .progress-message { margin-bottom: 7px; }
+    .promo-hint { color: #b71c1c; font-size: .95em; margin-bottom: 11px;}
+    @media (max-width:600px){
+      .container {padding:12px 4vw;}
+      h1{font-size:1.2em;}
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1> Организация праздников и событий</h1>
+    <div class="services">
+      <b>Наши услуги:</b>
+      <ul>
+        <li>Организация свадьбы — <b>$2000</b></li>
+        <li>Организация дня рождения — <b>$1000</b></li>
+        <li>Организация конференции — <b>$15&nbsp;000</b></li>
+      </ul>
+    </div>
+
+    <h3>Заявка на мероприятие</h3>
+    <label for="orderTextarea">Опишите ваше событие, адрес, пожелания, вопросы.</label>
+    <p style="margin: 4px 0 4px 0; font-size: 0.95em; color: #555;">Не забудьте указать ваш телефон. </p>
+    <textarea id="orderTextarea" rows="4" placeholder="Пример: 'Хотим свадьбу на 100 человек, адрес: ... Телефон: 0501234567 ... Особые пожелания: ...'"></textarea>
+    <button onclick="placeOrder()">Отправить заявку</button>
+    <div id="orderResponse"></div>
+
+    <div style="margin:38px 0 14px 0; border-top: 1px solid #ececec;"></div>
+
+    <h3>Получить спецпромокод</h3>
+    <div class="promo-hint">Только для первых 10 зарегистрированных!</div>
+    <label for="emailInput">Ваш email:</label>
+    <input type="email" id="emailInput" placeholder="например, test@example.com">
+    <button onclick="subscribe()">Получить промокод</button>
+
+    <div id="response"></div>
+    <div id="progressBox"></div>
+  </div>
+
+  <script>
+    var socket = io('http://localhost:5000');
+    socket.on('progress', function(data) {
+      let box = document.getElementById('progressBox');
+      let msg = document.createElement('div');
+      msg.className = "progress-message";
+      msg.innerText = data.email + ": " + data.status;
+      box.appendChild(msg);
+      box.scrollTop = box.scrollHeight;
+    });
+
+    function placeOrder() {
+      const orderDetails = document.getElementById("orderTextarea").value;
+      if (!orderDetails) {
+        alert("Пожалуйста, опишите ваше мероприятие.");
+        return;
+      }
+      fetch('http://localhost:5000/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: Date.now(), item: orderDetails })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("orderResponse").innerText = "Ваша заявка принята! С вами свяжется менеджер.";
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Ошибка при отправке заявки");
+      });
+    }
+
+    function subscribe() {
+      const email = document.getElementById("emailInput").value;
+      if (!email) {
+        alert("Пожалуйста, введите email.");
+        return;
+      }
+      fetch('http://localhost:5000/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("response").innerText = "Email получен!";
+        document.getElementById('progressBox').innerHTML = '';
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Ошибка при подписке");
+      });
+    }
+  </script>
+</body>
+</html>
